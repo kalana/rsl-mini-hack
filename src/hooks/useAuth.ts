@@ -24,23 +24,28 @@ export function useAuthListener() {
     const auth = getAuth();
     const unsubscribe = onIdTokenChanged(auth, async (firebaseUser: User | null) => {
       if (firebaseUser) {
-        const token = await firebaseUser.getIdToken();
-        document.cookie = `firebase-auth-token=${token}; path=/; max-age=3600; SameSite=Strict`;
+        try {
+          const token = await firebaseUser.getIdToken();
+          document.cookie = `firebase-auth-token=${token}; path=/; max-age=3600; SameSite=Strict`;
 
-        let profile = await getUserProfile(firebaseUser.uid);
-        if (!profile) {
-          await createUserProfile(firebaseUser.uid, {
-            name: firebaseUser.displayName ?? '',
-            email: firebaseUser.email ?? '',
-            monthlyIncome: 0,
-            monthlyBudget: 0,
-            savingsTarget: 0,
-            currency: 'USD',
-          });
-          await seedDefaultCategories(firebaseUser.uid);
-          profile = await getUserProfile(firebaseUser.uid);
+          let profile = await getUserProfile(firebaseUser.uid);
+          if (!profile) {
+            await createUserProfile(firebaseUser.uid, {
+              name: firebaseUser.displayName ?? '',
+              email: firebaseUser.email ?? '',
+              monthlyIncome: 0,
+              monthlyBudget: 0,
+              savingsTarget: 0,
+              currency: 'USD',
+            });
+            await seedDefaultCategories(firebaseUser.uid);
+            profile = await getUserProfile(firebaseUser.uid);
+          }
+          setUser(profile);
+        } catch (err) {
+          console.error('[useAuthListener] Failed to load user profile:', err);
+          setLoading(false);
         }
-        setUser(profile);
       } else {
         document.cookie = 'firebase-auth-token=; path=/; max-age=0';
         clearAuth();
@@ -52,12 +57,18 @@ export function useAuthListener() {
 }
 
 export async function login(email: string, password: string) {
-  await signInWithEmailAndPassword(getAuth(), email, password);
+  const credential = await signInWithEmailAndPassword(getAuth(), email, password);
+  // Set cookie immediately so middleware permits the upcoming navigation
+  const token = await credential.user.getIdToken();
+  document.cookie = `firebase-auth-token=${token}; path=/; max-age=3600; SameSite=Strict`;
 }
 
 export async function register(name: string, email: string, password: string) {
   const credential = await createUserWithEmailAndPassword(getAuth(), email, password);
   await updateProfile(credential.user, { displayName: name });
+  // Set cookie immediately so middleware permits the upcoming navigation
+  const token = await credential.user.getIdToken();
+  document.cookie = `firebase-auth-token=${token}; path=/; max-age=3600; SameSite=Strict`;
   return credential.user;
 }
 

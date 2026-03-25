@@ -8,7 +8,6 @@ import {
   collection,
   query,
   where,
-  orderBy,
   onSnapshot,
   Timestamp,
   serverTimestamp,
@@ -82,11 +81,13 @@ export function subscribeToTransactions(
   const db = getDb();
   const q = query(
     collection(db, 'transactions'),
-    where('userId', '==', userId),
-    orderBy('date', 'desc')
+    where('userId', '==', userId)
   );
   return onSnapshot(q, (snapshot) => {
-    callback(snapshot.docs.map(transactionFromDoc));
+    const sorted = snapshot.docs
+      .map(transactionFromDoc)
+      .sort((a, b) => b.date.getTime() - a.date.getTime());
+    callback(sorted);
   });
 }
 
