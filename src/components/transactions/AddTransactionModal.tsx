@@ -57,6 +57,16 @@ export function AddTransactionModal() {
     }
   }, [isAddTransactionOpen]);
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!isAddTransactionOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeAddTransaction();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [isAddTransactionOpen, closeAddTransaction]);
+
   // Filter categories by type
   const expenseCategories = categories.filter((c) => !['Salary'].includes(c.name));
   const incomeCategories  = categories.filter((c) => ['Salary', 'Other'].includes(c.name) || !['Food','Transport','Shopping','Health','Bills','Entertainment','Education'].includes(c.name));
